@@ -11,7 +11,7 @@
 require_once WORKERMAN_ROOT_DIR . 'Core/SocketWorker.php';
 define('GAME_ROOT_DIR', realpath(__DIR__.'/../'));
 require_once GAME_ROOT_DIR . '/Protocols/GatewayProtocol.php';
-require_once GAME_ROOT_DIR . '/Store.php';
+require_once GAME_ROOT_DIR . '/Lib/Store.php';
 
 class GameGateway extends Man\Core\SocketWorker
 {

@@ -6,7 +6,7 @@
  * 
  */
 
-require_once GAME_ROOT_DIR . '/Store.php';
+require_once GAME_ROOT_DIR . '/Lib/Store.php';
 
 class GateWay
 {

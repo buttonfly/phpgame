@@ -6,7 +6,7 @@
  * 
  */
 
-require_once GAME_ROOT_DIR . '/Gateway.php';
+require_once GAME_ROOT_DIR . '/Lib/Gateway.php';
 
 class Event
 {
