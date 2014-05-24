@@ -1,15 +1,17 @@
 <?php
 /**
- * 
- * 
+ * Class Event
+ *
  * @author walkor <worker-man@qq.com>
- * 
  */
 
 require_once GAME_ROOT_DIR . '/Lib/Gateway.php';
+require_once GAME_ROOT_DIR . '/Protocols/WebSocket.php';
+require_once GAME_ROOT_DIR . '/Protocols/GameBuffer.php';
 
 class Event
 {
+    protected static $data = array();
    /**
     * 用户连接gateway后第一次发包会触发此方法
     * @param string $message 一般是传递的账号密码等信息
@@ -17,10 +19,15 @@ class Event
     */
    public static function onConnect($message)
    {
+       //print_r($message);
+       GameBuffer::input($message, self::$data);
+       //print_r(self::$data);
        // 通过message验证用户，并获得uid
        $uid = self::checkUser($message);
+       $return = self::process(self::$data);
+       print_r($return);
        // 不合法踢掉
-       if(!$uid)
+       if(!$return)
        {
            // 返回失败
            return GateWay::kickCurrentUser('登录失败');
@@ -62,7 +69,7 @@ class Event
     */
    public static function onMessage($uid, $message)
    {
-        $message_data = json_decode($message, true);
+        /*$message_data = json_decode($message, true);
         
         // 向所有人发送
         if($message_data['to_uid'] == 'all')
@@ -73,7 +80,22 @@ class Event
         else
         {
             return GateWay::sendToUid($message_data['to_uid'], $message);
+        }*/
+        
+        GameBuffer::input($message, self::$data);
+        if (empty(self::$data)) {
+            return;
         }
+        print_r(self::$data['body']);
+        $message_data = json_decode(self::$data['body'], true);
+        
+        if (isset($message_data['heart']) || empty($message_data)) {
+            return;
+        }
+        $return = self::process(self::$data);
+        print_r($return);
+        
+        return GateWay::sendToAll(json_encode($return));
    }
    
    
@@ -86,5 +108,21 @@ class Event
    protected static function checkUser($message)
    {
        return substr(strval(microtime(true)), 3, 10)*100;
+   }
+   
+   protected static function process($data)
+   {
+       if (!class_exists('Engine')) {
+           $frameworkBootstrap = GAME_ROOT_DIR . '/../Api/index.php';
+           require_once $frameworkBootstrap;
+       }
+       //print_r(array('u' => 'test', 'p' => '888888'));
+       //$tt = array('u' => 'test', 'p' => '888888');
+       //print_r($data['body']);
+       $body = json_decode($data['body'], true);
+       // print_r($body);
+       $engine = new Engine ();
+       $engine->setRoutePath($body['cmd'], $body['scmd'], $body['data']);
+       return $engine->run();
    }
 }

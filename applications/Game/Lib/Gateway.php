@@ -18,6 +18,7 @@ class GateWay
    public static function sendToAll($message)
    {
        $pack = new GatewayProtocol();
+        
        $pack->header['cmd'] = GatewayProtocol::CMD_SEND_TO_ALL;
        $pack->header['series_id'] = 0;
        $pack->header['local_ip'] = Context::$local_ip;
@@ -26,7 +27,11 @@ class GateWay
        $pack->header['client_ip'] = Context::$client_ip;
        $pack->header['client_port'] = Context::$client_port;
        $pack->header['uid'] = Context::$uid;
-       $pack->body = $message;
+       $buf  = new Buffer();
+       $buf->header['cmd'] = GatewayProtocol::CMD_SEND_TO_ALL;
+       $buf->header['series_id'] = 0;
+       $buf->body = $message;
+       $pack->body = $buf->getBuffer();
        $buffer = $pack->getBuffer();
        $all_addresses = Store::get('GLOBAL_GATEWAY_ADDRESS');
        foreach($all_addresses as $address)
@@ -98,7 +103,7 @@ class GateWay
     * @param string $message
     * @return boolean
     */
-   public static function sendCmdAndMessageToUid($uid, $cmd , $message)
+   public static function sendCmdAndMessageToUid($uid, $cmd, $message)
    {
        $pack = new GatewayProtocol();
        $pack->header['cmd'] = $cmd;
@@ -125,7 +130,11 @@ class GateWay
        $pack->header['client_ip'] = Context::$client_ip;
        $pack->header['client_port'] = Context::$client_port;
        $pack->header['uid'] = empty($uid) ? 0 : $uid;
-       $pack->body = $message;
+       $buf  = new Buffer();
+       $buf->header['cmd'] = $cmd;
+       $buf->header['series_id'] = 0;
+       $buf->body = $message;
+       $pack->body = $buf->getBuffer();
         
        return self::sendToGateway("udp://{$pack->header['local_ip']}:{$pack->header['local_port']}", $pack->getBuffer());
    }
@@ -153,7 +162,11 @@ class GateWay
            $pack->header['client_port'] = Context::$client_port;
        }
        $pack->header['uid'] = $uid ? $uid : 0;
-       $pack->body = $message;
+       $buf  = new Buffer();
+       $buf->header['cmd'] = GatewayProtocol::CMD_KICK;
+       $buf->header['series_id'] = 0;
+       $buf->body = $message;
+       $pack->body = $buf->getBuffer();
        
        return self::sendToGateway("udp://{$pack->header['local_ip']}:{$pack->header['local_port']}", $pack->getBuffer());
    }
