@@ -1,11 +1,11 @@
 <?php
 /**
- * Class ApiLib_Model_Base
+ * Class Library_Model_Base
  *
  * @author PhpGame
  */
 
-class ApiLib_Model_Base
+class Library_Model_Base
 {
     protected static $Instances;
     public $dbGamecity;
@@ -22,7 +22,7 @@ class ApiLib_Model_Base
 
     /**
      * 
-     * @return AuthLib_Base
+     * @return Library_Base
      */
     static public function Instance()
     {

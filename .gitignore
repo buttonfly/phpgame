@@ -3,3 +3,5 @@ workerman/logs
 .buildpath
 .settings/
 workerman/php_errors.log
+applications/Api/Config/config.php
+

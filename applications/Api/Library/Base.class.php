@@ -1,11 +1,11 @@
 <?php
 /**
- * Class ApiLib_Base
+ * Class Library_Base
  *
  * @author PhpGame
  */
 
-class ApiLib_Base
+class Library_Base
 {
     protected static $Instances;
     protected $cache;

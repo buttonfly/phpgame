@@ -8,7 +8,6 @@
 class DbConn
 {
     const ErrorCode_Success = '00000';
-    const ERROR_CODE_SUCCESS = '00000';  //deprecated
 
     static protected $sqlConnections = array();
     private $showError = false;
@@ -29,9 +28,6 @@ class DbConn
     protected $allowSaveToNonExistingPk = false;
     protected $allowGuessConditionOperator = null;
     protected $autoCloseLastStatement = null;
-
-    static public $SqlMonitorCallbackGlobal;
-    protected $sqlMonitorCallback;
 
     static protected function GetConnectionByClassName($name, $className)
     {
@@ -54,14 +50,6 @@ class DbConn
                 $conn->close();
             self::$sqlConnections = array();
         }
-    }
-
-    public function __construct()
-    {
-        if (defined('MS_DEBUG') && MS_DEBUG)
-            $this->enableShowError (true);
-
-        $this->sqlMonitorCallback = self::$SqlMonitorCallbackGlobal;
     }
 
     protected function getPdoDsn()
@@ -98,11 +86,12 @@ class DbConn
                 $re = $this->pdo->query('SELECT 1');
                 if ($re) $re = $re->fetchColumn();
                 $connected = $re;
-            } catch(Exception $e) {
+            } catch (Exception $e) {
                 $connected = false;
             }
         }
-        if ($connected) return true;
+        if ($connected)
+            return true;
         $config = Registry::get('serverConfig');
         $name = $this->name;
         if (empty($config['Database'][$name]))
@@ -170,20 +159,6 @@ class DbConn
     public function quoteTableName($s)
     {
         return $this->quoteSqlName($s);
-    }
-
-    public function enableShowSql($v)
-    {
-        $last = $this->showSql;
-        $this->showSql = $v;
-        return $last;
-    }
-
-    public function enableShowError($v)
-    {
-        $last = $this->showError;
-        $this->showError = $v;
-        return $last;
     }
 
     public function buildWhere($condition = array(), $logic = 'AND')
@@ -386,34 +361,6 @@ class DbConn
         $this->allowGuessConditionOperator = $v;
     }
 
-    public function setSqlMonitorCallback($cb)
-    {
-        $oldCb = $this->sqlMonitorCallback;
-        $this->sqlMonitorCallback = $cb;
-        return $oldCb;
-    }
-
-    protected function doSqlMonitorCallback($func, $stage, $affectedRows = null)
-    {
-        if ($this->sqlMonitorCallback) {
-            call_user_func($this->sqlMonitorCallback, $this, $func, $stage, $affectedRows);
-        }
-    }
-
-
-    static public function SqlMonitorCallback_MonologDebug($dbConn, $func, $stage, $affectedRows)
-    {
-        static $lastBeginTime;
-        if ($stage == 'begin') {
-            monolog_debug("SQL/{$dbConn->getName()}", "-- $stage $func: [" . date('Y-m-d H:i:s') . "] --\n{$dbConn->getLastSql()}\n");
-            $lastBeginTime = microtime(true);
-        }
-        if ($stage == 'end') {
-            $timeDelta = microtime(true) - $lastBeginTime;
-            monolog_debug("SQL/{$dbConn->getName()}", "-- $stage $func: time: $timeDelta, affected: " . var_export($affectedRows, true) . "\n\n");
-        }
-    }
-
     public function closeLastStatement()
     {
         if (is_object($this->lastStmt)) {
@@ -443,20 +390,15 @@ class DbConn
         if ($this->showSql)
             echo htmlspecialchars($this->lastSql) . "<br />\n";
 
-        $this->doSqlMonitorCallback('exec', 'begin');
-
         $sqlCmd = strtoupper(substr($this->lastSql, 0, 6));
         if (in_array($sqlCmd, array('UPDATE', 'DELETE')) && stripos($this->lastSql, 'where') === false) {
-            $this->doSqlMonitorCallback('exec', 'end', 'denied');
             throw new Exception('no WHERE condition in SQL to be executed');
         }
         if ($this->allowRealExec) {
             $result = $this->pdo->exec($this->lastSql);
-            $this->doSqlMonitorCallback('exec', 'end', $result);
             $this->processError($result !== false, 'exec', $this->lastSql, $this->pdo->errorCode(), $this->pdo->errorInfo());
         } else {
             $result = true; // dry run, fake result value
-            $this->doSqlMonitorCallback('exec', 'end', 'dryrun');
             $this->processError($result !== false, 'exec', $this->lastSql, self::ErrorCode_Success, array());
         }
 
@@ -476,16 +418,14 @@ class DbConn
         if ($this->autoCloseLastStatement)
             $this->closeLastStatement();
         if (empty($sql))
-            $this->lastSql = $this->getSelectSql();  //不需要trim，拼接函数保证以SELECT开头
+            $this->lastSql = $this->getSql();  //不需要trim，拼接函数保证以SELECT开头
         else
            $this->lastSql = trim($this->buildSql($sql));
         if ($this->showSql)
             echo htmlspecialchars($this->lastSql) . "<br />\n";
 
-        $this->doSqlMonitorCallback('query', 'begin');
         $sqlCmd = strtoupper(substr($this->lastSql, 0, 6));
         if (in_array($sqlCmd, array('UPDATE', 'DELETE')) && stripos($this->lastSql, 'where') === false) {
-            $this->doSqlMonitorCallback('query', 'end', 'denied');
             throw new Exception('no WHERE condition in SQL to be executed');
         }
 
@@ -494,9 +434,6 @@ class DbConn
 
             if ($this->lastStmt !== false) {
                 $rowCount = $this->lastStmt->rowCount();
-                $this->doSqlMonitorCallback('query', 'end', $rowCount);
-            } else {
-                $this->doSqlMonitorCallback('query', 'end', false);
             }
             //php5.4 dblib bug: 如果一个stmt因不被使用而回收，会导致相关的资源被释放，之后其他的query也都会失败
             if ($this->isDriver('dblib'))
@@ -505,7 +442,6 @@ class DbConn
             $this->processError($this->lastStmt !== false, 'query', $this->lastSql, $this->pdo->errorCode(), $this->pdo->errorInfo());
         } else {
             $this->lastStmt = true;
-            $this->doSqlMonitorCallback('query', 'end', 'dryrun');
             $this->processError($this->lastStmt !== false, 'query', $this->lastSql, self::ErrorCode_Success, array());
         }
         return $this->lastStmt;
@@ -531,11 +467,8 @@ class DbConn
         if ($this->showSql)
             echo htmlspecialchars($this->lastSql) . "<br />\n";
 
-        $this->doSqlMonitorCallback('preparedExec', 'begin');
-
         $sqlCmd = strtoupper(substr($this->lastSql, 0, 6));
         if (in_array($sqlCmd, array('UPDATE', 'DELETE')) && stripos($this->lastSql, 'where') === false) {
-            $this->doSqlMonitorCallback('preparedExec', 'end', 'denied');
             throw new Exception('no WHERE condition in SQL to be executed');
         }
 
@@ -544,9 +477,6 @@ class DbConn
             $ret = $this->lastStmt->execute($params);
             if ($ret === true) {
                 $rowCount = $this->lastStmt->rowCount();
-                $this->doSqlMonitorCallback('preparedExec', 'end', $rowCount);
-            } else {
-                $this->doSqlMonitorCallback('preparedExec', 'end', false);
             }
             if ($this->isDriver('dblib'))
                 $this->cachedStmts[] = $this->lastStmt;
@@ -555,17 +485,29 @@ class DbConn
             return $ret;
         } else {
             $this->lastStmt = true;
-            $this->doSqlMonitorCallback('preparedExec', 'end', 'dryrun');
             $this->processError($this->lastStmt !== false, 'preparedExec', $this->lastSql, self::ErrorCode_Success, array());
             return true;
         }
     }
 
+    /**
+     * 获取上一次查询的SQL
+     * 
+     * @return bool
+     */
     public function getLastSql()
     {
         return $this->lastSql;
     }
 
+    /**
+     * insert 数据进数据库
+     *
+     * @param string $table  表名
+     * @param array  $params 字段数组
+     * 
+     * @return bool
+     */
     public function insert($table, $params)
     {
         $columns = '';
@@ -592,6 +534,15 @@ class DbConn
         return ! ! $ret;
     }
 
+    /**
+     * 更新数据进数据库
+     *
+     * @param string $table  表名
+     * @param array  $params 字段数组
+     * @param array  $cond   条件数组
+     *
+     * @return bool
+     */
     public function update($table, $params, $cond)
     {
         if (empty($params))
@@ -624,6 +575,14 @@ class DbConn
         return $ret;
     }
 
+    /**
+     * 删除数据
+     *
+     * @param string $table  表名
+     * @param array  $cond   条件数组
+     *
+     * @return bool
+     */
     public function delete($table, $cond)
     {
         $table = $this->quoteTableName($table);
@@ -633,6 +592,11 @@ class DbConn
         return $ret;
     }
 
+    /**
+     * 事务开始
+     *
+     * @return bool Returns true on success or false on failure.
+     */
     public function transBegin()
     {
         if (!$this->connect())
@@ -641,11 +605,21 @@ class DbConn
         return $this->pdo->beginTransaction();
     }
 
+    /**
+     * 事务提交
+     *
+     * @return bool Returns true on success or false on failure.
+     */
     public function transCommit()
     {
         return $this->pdo->commit();
     }
 
+    /**
+     * 事务回滚
+     *
+     * @return bool Returns true on success or false on failure.
+     */
     public function transRollback()
     {
         return $this->pdo->rollBack();
@@ -657,13 +631,21 @@ class DbConn
     protected $select_sql_group_having;
     protected $select_sql_order_limit;
 
-    public function getSelectSql()
+    /**
+     * 获取当前查询的SQL
+     *
+     * @return bool
+     */
+    public function getSql()
     {
         return "SELECT {$this->select_sql_top} {$this->select_sql_columns} {$this->select_sql_from_where} {$this->select_sql_group_having} {$this->select_sql_order_limit}";
     }
 
     /**
+     * select
+     * 
      * @param string $columns
+     * 
      * @return DbConn
      */
     public function select($columns = '*')
@@ -677,17 +659,10 @@ class DbConn
     }
 
     /**
-     * @param $n
-     * @return DbConn
-     */
-    public function top($n)
-    {
-        $n = intval($n);
-        $this->select_sql_top = "TOP $n";
-    }
-
-    /**
+     * from
+     * 
      * @param $table
+     * 
      * @return DbConn
      */
     public function from($table)
@@ -697,12 +672,21 @@ class DbConn
         return $this;
     }
 
+    /**
+     * join公用方法
+     * 
+     * @param $join  join类型
+     * @param $table 表名
+     * @param $cond  条件数组
+     * 
+     * @return DbConn
+     */
     protected function joinInternal($join, $table, $cond)
     {
         $table = $this->quoteTableName($table);
         $this->select_sql_from_where .= " $join $table ";
         if (is_string($cond)
-                && (strpos($cond, '=') === false && strpos($cond, '<') === false && strpos($cond, '>') === false)
+             && (strpos($cond, '=') === false && strpos($cond, '<') === false && strpos($cond, '>') === false)
         ) {
             $column = $this->quoteColumnName($cond);
             $this->select_sql_from_where .= " USING ($column) ";
@@ -714,8 +698,11 @@ class DbConn
     }
 
     /**
-     * @param $table
-     * @param $cond
+     * join
+     * 
+     * @param $table 表名
+     * @param $cond  条件数组
+     * 
      * @return DbConn
      */
     public function join($table, $cond)
@@ -724,8 +711,11 @@ class DbConn
     }
 
     /**
-     * @param $table
-     * @param $cond
+     * leftjoin
+     * 
+     * @param $table 表名
+     * @param $cond  条件数组
+     * 
      * @return DbConn
      */
     public function leftJoin($table, $cond)
@@ -734,8 +724,11 @@ class DbConn
     }
 
     /**
-     * @param $table
-     * @param $cond
+     * rightjoin
+     * 
+     * @param $table 表名
+     * @param $cond  条件数组
+     * 
      * @return DbConn
      */
     public function rightJoin($table, $cond)
@@ -744,7 +737,10 @@ class DbConn
     }
 
     /**
-     * @param $cond
+     * where
+     * 
+     * @param $cond 条件数组
+     * 
      * @return DbConn
      */
     public function where($cond)
@@ -755,7 +751,10 @@ class DbConn
     }
 
     /**
-     * @param $group
+     * group
+     * 
+     * @param $group 分组
+     * 
      * @return DbConn
      */
     public function group($group)
@@ -765,7 +764,10 @@ class DbConn
     }
 
     /**
-     * @param $having
+     * having
+     * 
+     * @param $having 配合group用
+     * 
      * @return DbConn
      */
     public function having($cond)
@@ -776,7 +778,10 @@ class DbConn
     }
 
     /**
-     * @param $order
+     * order
+     * 
+     * @param $order 排序
+     * 
      * @return DbConn
      */
     public function order($order)
@@ -785,6 +790,13 @@ class DbConn
         return $this;
     }
 
+    /**
+     * order
+     *
+     * @param $order 排序
+     *
+     * @return DbConn
+     */
     public function isDriver($name)
     {
         $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
@@ -832,12 +844,11 @@ class DbConn
      * @param string $key
      * @return array
      */
-    public function queryAllAssocKey($sql, $key)
+    public function getAllByKey($sql, $key)
     {
         $rows = array();
         $stmt = $this->query($sql);
-        if ($stmt)
-        {
+        if ($stmt) {
             while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false)
                 $rows[$row[$key]] = $row;
         }
@@ -852,7 +863,7 @@ class DbConn
     public function getAll($sql = null, $key = '')
     {
         if ($key)
-            return $this->queryAllAssocKey($sql, $key);
+            return $this->getAllByKey($sql, $key);
 
         $stmt = $this->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -889,14 +900,6 @@ class DbConn
         return $this->querySimple($sql);
     }
 
-    //general implemention
-    public function exists($table, $cond)
-    {
-        $table = $this->quoteTableName($table);
-        $where = $this->buildWhere($cond);
-        $sql = "SELECT 1 FROM $table $where";
-        return ! ! $this->querySimple($sql);
-    }
 }
 
 class DbMysql extends DbConn
@@ -1111,6 +1114,7 @@ class DbMysql extends DbConn
     {
         return parent::join($table, $cond);
     }
+    
     /**
      * @param $table
      * @param $cond
@@ -1124,6 +1128,7 @@ class DbMysql extends DbConn
     /**
      * @param $table
      * @param $cond
+     * 
      * @return DbMysql
      */
     public function rightJoin($table, $cond)
@@ -1133,6 +1138,7 @@ class DbMysql extends DbConn
 
     /**
      * @param $cond
+     * 
      * @return DbMysql
      */
     public function where($cond)
@@ -1142,6 +1148,7 @@ class DbMysql extends DbConn
 
     /**
      * @param $group
+     * 
      * @return DbMysql
      */
     public function group($group)
@@ -1151,6 +1158,7 @@ class DbMysql extends DbConn
 
     /**
      * @param $having
+     * 
      * @return DbMysql
      */
     public function having($having)
@@ -1160,6 +1168,7 @@ class DbMysql extends DbConn
 
     /**
      * @param $order
+     * 
      * @return DbMysql
      */
     public function order($order)
@@ -1170,6 +1179,7 @@ class DbMysql extends DbConn
     /**
      * @param $a
      * @param null $b
+     * 
      * @return DbMysql
      */
     public function limit($a, $b = null)
@@ -1183,14 +1193,6 @@ class DbMysql extends DbConn
             $this->select_sql_order_limit .= " LIMIT $a, $b ";
         }
         return $this;
-    }
-
-    public function exists($table, $cond)
-    {
-        $table = $this->quoteTableName($table);
-        $where = $this->buildWhere($cond);
-        $sql = "SELECT 1 FROM $table $where LIMIT 1";
-        return ! ! $this->querySimple($sql);
     }
     
 }
@@ -1224,9 +1226,12 @@ class DbReadWriteSplit
     {
         return !empty($this->beginReadFromMasterStack);
     }
+    
     /**
-     * 从slave或master分配连接（所以这个函数不叫slave）
+     * 从slave或master分配连接
+     * 
      * @var $name
+     * 
      * @return DbConn
      */
     public function read($name)
@@ -1245,7 +1250,9 @@ class DbReadWriteSplit
 
     /**
      * 只从master中分配数据库连接
+     * 
      * @var $name
+     * 
      * @return DbConn
      */
     public function master($name)
@@ -1259,7 +1266,9 @@ class DbReadWriteSplit
 
     /**
      * 只从slave中分配数据库连接
+     * 
      * @var $name
+     * 
      * @return DbConn
      */
     public function slave($name)
@@ -1286,6 +1295,7 @@ class DbMysqlReadWriteSplit extends DbReadWriteSplit
 {
     /**
      * @param null|string $name
+     * 
      * @return DbMysql
      */
     public function read($name = null)
@@ -1295,6 +1305,7 @@ class DbMysqlReadWriteSplit extends DbReadWriteSplit
 
     /**
      * @param null|string $name
+     * 
      * @return DbMysql
      */
     public function master($name = null)
@@ -1304,36 +1315,8 @@ class DbMysqlReadWriteSplit extends DbReadWriteSplit
 
     /**
      * @param null|string $name
+     * 
      * @return DbMysql
-     */
-    public function slave($name = null)
-    {
-        return parent::slave($name);
-    }
-}
-
-class DbMssqlReadWriteSplit extends DbReadWriteSplit
-{
-    /**
-     * @param null|string $name
-     * @return DbMssql
-     */
-    public function read($name = null)
-    {
-        return parent::read($name);
-    }
-    /**
-     * @param null|string $name
-     * @return DbMssql
-     */
-    public function master($name = null)
-    {
-        return parent::master($name);
-    }
-
-    /**
-     * @param null|string $name
-     * @return DbMssql
      */
     public function slave($name = null)
     {

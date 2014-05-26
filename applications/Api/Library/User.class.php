@@ -1,16 +1,16 @@
 <?php
 /**
- * Class ApiLib_User
+ * Class Library_User
  *
  * @author PhpGame
  */
 
-class ApiLib_User extends ApiLib_Base
+class Library_User extends Library_Base
 {
     const INC_SYSTEM_PASSWORD_KEY = 't53h45lo7y';
     
     /**
-     * @return ApiLib_User
+     * @return Library_User
      */
     static public function Instance()
     {
@@ -35,7 +35,8 @@ class ApiLib_User extends ApiLib_Base
 
         $garr = array();
         //::1 retrieve member site login info 这里注意用户名和密码的过滤特殊字符
-        $userinfo = ApiLib_Model_User::Instance()->getUserInfoByUserName($username);
+        echo $username;
+        $userinfo = Library_Model_User::Instance()->getUserInfoByUserName($username);
         if ($userinfo) {
             if ($userinfo['password'] == $password) {
                 $userid = $userinfo['userid'];
@@ -59,11 +60,11 @@ class ApiLib_User extends ApiLib_Base
             return '10001'; //账号错误
         }
         // 更新用户IP到用户表
-        $result = ApiLib_Model_User::Instance()->updateUserLoginByUserId($userid, $loginip);
+        $result = Library_Model_User::Instance()->updateUserLoginByUserId($userid, $loginip);
         if ($result) {
             $key = md5($userid + "_" + time());
             //::3 replace user_logon data 根据用户ID获取用户登陆信息
-            $result_user = ApiLib_Model_User::Instance()->getUserLoginByUserId($userid);
+            $result_user = Library_Model_User::Instance()->getUserLoginByUserId($userid);
             if ($result_user) {
                 $userinfo = array('`key`' => $key,
                         'cip' => $loginip,
@@ -74,7 +75,7 @@ class ApiLib_User extends ApiLib_Base
                         'alogintime' => time()
                 );
                 // 根据用户ID更新用户登陆信息到用户登陆表
-                ApiLib_Model_User::Instance()->updateUserLoginAllByUserId($userid, $userinfo);
+                Library_Model_User::Instance()->updateUserLoginAllByUserId($userid, $userinfo);
             } else {
                 $userinfo = array('userid' => $userid,
                         '`key`' => $key,
@@ -86,7 +87,7 @@ class ApiLib_User extends ApiLib_Base
                         'alogintime' => time()
                 );
                 // 写入用户登陆信息
-                ApiLib_Model_User::Instance()->insertUserLogin($userinfo);
+                Library_Model_User::Instance()->insertUserLogin($userinfo);
             }
             // 设置用户登陆缓存
             $this->_setUserMemcache($userid, $loginip, $port, $key);
@@ -139,7 +140,7 @@ class ApiLib_User extends ApiLib_Base
      *
      * @param string $key 用户登陆的标识
      *
-     * @return ApiLib_User
+     * @return Library_User
      */
     public function userLogout($key)
     {
@@ -149,7 +150,7 @@ class ApiLib_User extends ApiLib_Base
         // 缓存删除用户登陆的第二组数据
         $this->cache->delete('u'.$userinfo['u']);
         // 删除用户登陆表的数据
-        ApiLib_Model_User::Instance()->deleteUserLogin($userinfo['u']);
+        Library_Model_User::Instance()->deleteUserLogin($userinfo['u']);
         return true;
     }
 

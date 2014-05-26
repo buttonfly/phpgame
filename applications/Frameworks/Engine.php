@@ -50,7 +50,7 @@ class Engine
             $tmpFields = $this->routePathFields;
             array_pop($tmpFields);
             $tempControllerClassName = 'Controller_' . join('_', $tmpFields);
-            if (ClassAutoLoader::Load($tempControllerClassName) )
+            if (ClassAutoLoader::Load($tempControllerClassName))
                 $foundControllerClassName = $tempControllerClassName;
         }
         if (empty($foundControllerClassName)) {

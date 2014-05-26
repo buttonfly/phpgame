@@ -21,8 +21,7 @@ class Controller_User extends Controller_Base
         $arr[3] = '8282';
         $arr[4] = '192.168.1.168';
         try {
-            $result = ApiLib_User::Instance()->userLogin($arr[0], $arr[1], $arr[2], $arr[3], $arr[4]);
-            //print_r($result);
+            $result = Library_User::Instance()->userLogin($arr[0], $arr[1], $arr[2], $arr[3], $arr[4]);
             return $this->showResult($result);
         } catch (Exception $ex) {
             return $this->showException();
@@ -37,7 +36,7 @@ class Controller_User extends Controller_Base
     public function action_Logout()
     {
         try {
-            $result = ApiLib_User::Instance()->userLogout($this->getData);
+            $result = Library_User::Instance()->userLogout($this->getData);
             return $this->showResult($result);
         } catch (Exception $ex) {
             return $this->showException();

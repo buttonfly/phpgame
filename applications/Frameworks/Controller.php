@@ -15,6 +15,7 @@ class Controller {
 
     /** @var TemplateEngine */
     protected $templateEngine;
+    
     /**
      *
      * @var TipMessageManager
@@ -24,10 +25,9 @@ class Controller {
     /**
      * @param $siteEngine SiteEngine
      */
-    public function  __construct($engine)
+    public function __construct($engine)
     {
         $this->engine = $engine;
-
         $this->actionPathFields = $engine->getRoutePathFields();
     }
 
@@ -48,7 +48,7 @@ class Controller {
     public function __call($name, $arguments)
     {
         $s = join('/', $this->actionPathFields);
-        throw new Exception("unknown call to MSViewController: $name ($s)");
+        throw new Exception("unknown call to Controller: $name ($s)");
     }
 
     /**

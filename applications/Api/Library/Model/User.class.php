@@ -1,19 +1,18 @@
 <?php
 /**
- * Class ApiLib_Model_User
+ * Class Library_Model_User
  *
  * @author PhpGame
  */
 
-class ApiLib_Model_User extends ApiLib_Model_Base
+class Library_Model_User extends Library_Model_Base
 {
 
     const USER_TABLE = 'user';
     const USER_LOGIN_TABLE = 'user_login';
-    const ROLE_TABLE = 'role';
 
     /**
-     * @return ApiLib_Model_User
+     * @return Library_Model_User
      */
     static public function Instance()
     {
