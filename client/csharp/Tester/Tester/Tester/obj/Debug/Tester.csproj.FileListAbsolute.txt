@@ -1,0 +1,8 @@
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\bin\Debug\Tester.exe.config
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\bin\Debug\Tester.exe
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\bin\Debug\Tester.pdb
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\obj\Debug\Tester.csprojResolveAssemblyReference.cache
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\obj\Debug\Tester.Properties.Resources.resources
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\obj\Debug\Tester.csproj.GenerateResource.Cache
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\obj\Debug\Tester.exe
+G:\TCPCLIENT\csharp\Tester\Tester\Tester\obj\Debug\Tester.pdb

@@ -1,0 +1,5 @@
+G:\TCPCLIENT\csharp\ClientSocket\ClientSocket\bin\Debug\ClientSocket.dll
+G:\TCPCLIENT\csharp\ClientSocket\ClientSocket\bin\Debug\ClientSocket.pdb
+G:\TCPCLIENT\csharp\ClientSocket\ClientSocket\obj\Debug\ClientSocket.csprojResolveAssemblyReference.cache
+G:\TCPCLIENT\csharp\ClientSocket\ClientSocket\obj\Debug\ClientSocket.dll
+G:\TCPCLIENT\csharp\ClientSocket\ClientSocket\obj\Debug\ClientSocket.pdb
